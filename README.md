@@ -1,5 +1,5 @@
 # SUMO-Integrated-Perimeter-Control-and-Route-Guidance
-This repository implements a multi-scale joint control (MSJC) framework for perimeter control and route guidance integrated with SUMO (Simulation of Urban MObility). 
+This repository implements a multi-scale joint control (MSJC) framework for perimeter control and route guidance in a multi-region network, integrated with SUMO (Simulation of Urban MObility).
 
 Control Strategies:
 1. MSJC: proposed multi-scale joint control of perimeter control and route guidance
@@ -13,6 +13,9 @@ The SUMO simulation files are located in the data directory.
 Related Paper: 
 
 Peng, X., Wang, H., & Zhang, M. A Multi-Scale Perimeter Control and Route Guidance System for Large-Scale Road Networks. Available at SSRN 4502092.
+
+Abstract: 
+Perimeter control and route guidance are effective ways to reduce traffic congestion and improve traffic efficiency by controlling the spatial and temporal traffic distribution on the network. This paper presents a multi-scale joint perimeter control and route guidance (MSJC) framework for controlling traffic in large-scale networks. The network is first partitioned into several subnetworks (regions) with traffic in each region governed by its macroscopic fundamental diagram (MFD), which forms the macroscale network (upper level). Each subnetwork, comprised of actual road links and signalized intersections, forms the microscale network (lower level). At the upper level, a joint perimeter control and route guidance model solves the region-based inflow rate and hyper-path flows to control the accumulation of each region and thus maximize the throughput of each region. At the lower level, a perimeter control strategy integrated with a backpressure policy determines the optimal signal phases of the intersections at the regional boundary. At the same time, a route choice model for vehicles is constructed to meet hyper-path flows and ensure the intra-region homogeneity of traffic density. The case study results demonstrate that the proposed MSJC outperforms other benchmarks in regulating regional accumulation, thereby improving throughput.
 
 Other Papers by the Author:
 
