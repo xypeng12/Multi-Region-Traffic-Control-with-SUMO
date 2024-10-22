@@ -299,42 +299,6 @@ class control(network):
 
         self.total_output += self.network_output
         self.total_vehicles = total_vehicles
-    '''
-    def _get_data_for_no_control_period(self):
-        for i in self.regions:
-            vehicle_number = 0
-            vehicles = set()
-            for j in self.regions[i].edge_list_IIE:
-                vehicle_number += traci.edge.getLastStepVehicleNumber(j)
-                vehicles.update(traci.edge.getLastStepVehicleIDs(j))
-            self.regions[i].n=vehicle_number
-
-            output = 0
-            for j in self.regions[i].vehicles:
-                if j not in vehicles:
-                    output += 1
-            self.regions[i].output = output
-
-            self.regions[i].vehicles = vehicles
-    
-    def _get_network_performance(self):
-        total_vehicles = set()
-        self.network_delay=0
-
-        for i in self.edges_IIE_id:
-            total_vehicles.update(traci.edge.getLastStepVehicleIDs(i))
-            self.network_delay += traci.edge.getLastStepVehicleNumber(i) * self.mic_length
-        self.total_delay += self.network_delay
-        self.network_n = len(total_vehicles)
-
-        self.network_output = 0
-        for v in self.total_vehicles:
-            if v not in total_vehicles:
-                self.network_output += 1
-
-        self.total_output += self.network_output
-        self.total_vehicles = total_vehicles
-    '''
     def _get_data(self, time):
         if time%self.update_edge_tt==0:
             self.update_edge_travel_time()
