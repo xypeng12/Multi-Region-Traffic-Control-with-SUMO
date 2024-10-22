@@ -18,7 +18,6 @@ plt.rcParams["axes.unicode_minus"]=False
 
 class control(network):
     def __init__(self):
-        self.condition = 'dynamic'  # 动态分区
         self.test_begin = 800
         self.test_end = 900
         self.range_M = 0.2
@@ -26,31 +25,22 @@ class control(network):
         self.saturated_flow = 0.5  # 0.5veh/s
         self.sumocfg_file = 'data\\yangzhou.sumocfg'
         self.warm_time = 200
-        self.time_length = 3600  # 调试 正常3600
-        self.mac_length = 100  # 控制步长=10s joint model
-        self.mic_length = 10  # signal & route
-        self.update_edge_tt=20 #20s更新一次速度
+        self.time_length = 3600 
+        self.mac_length = 100  
+        self.mic_length = 10 
+        self.update_edge_tt=20 #20s update speed
         self.threshold_veh_num=100
 
         self.beta = 1
-        '''
-        self.warm_time = 0
-        self.time_length = 100  # 调试 正常3600
-        self.mac_length = 20  # 控制步长=10s joint model
-        self.mic_length = 10  # signal & route
-        '''
 
         self.save_path = 'control'
         self.read_path = 'partition'  # revise1
 
-        # 读取region数据
         self._read_region()
     def check_terminate_condition(self):
         for region in self.regions.values():
             if region.n >= region.critical:
-                # 如果有一个区域的 n 值大于等于 critical，则返回 False
                 return False
-        # 所有区域的 n 值都小于 critical，返回 True
         return True
 
     def _draw_density(self, time, compare=False):
@@ -104,7 +94,6 @@ class control(network):
                 if k == 0:
                     k = 1
                     continue
-                # 一条region数据
                 if int(row[1]) != time:
                     time = int(row[1])
                     self.dynamic_regions.append(regions)
@@ -114,7 +103,6 @@ class control(network):
                 for i in range(len(row) - 4):
                     if row[4 + i] != '':
                         regions[id].edge_list.add(row[4 + i])
-            # 储存最后一个时段的数据
             self.dynamic_regions.append(regions)
 
         with open(self.read_path + '\\' + 'MFD_parameter.csv') as f:
@@ -124,8 +112,7 @@ class control(network):
                 if k == 0:
                     k = 1
                     continue
-                # 一条region数据
-                temp = row[3][1:-1]  # str表示的mfd_param的list
+                temp = row[3][1:-1] 
                 temp = temp.split(' ')
                 temp = [i for i in temp if i != '']
                 print(temp)
@@ -147,10 +134,8 @@ class control(network):
                 Q[i] = q
             return Q
 
-        # 计算总时间段数目
         total_intervals = int((end - begin) / self.mac_length)
 
-        # 初始化所有时段，设置默认需求为0
         for i in regions:
             regions[i].demands = [reset_Q()[i] for _ in range(total_intervals)]
 
@@ -163,24 +148,19 @@ class control(network):
             data = child.attrib
             depart = float(data['depart'])
 
-            # 如果该车辆的出发时间不在指定范围内，跳过
             if depart < begin or depart >= end:
                 continue
 
-            # 确定车辆属于哪个时间段
             interval_index = int((depart - begin) / self.mac_length)
-            # 遍历车辆的route信息并分配需求
             for subchild in child:
                 if subchild.tag == 'route':
                     edges = subchild.attrib['edges'].split()
-                    o = edges[0]  # 起点
-                    d = edges[-1]  # 终点
+                    o = edges[0]  
+                    d = edges[-1]  
                     for i in regions:
-                        # print(234,regions[i].node_list)
                         if o in regions[i].edge_list:
                             for j in regions:
                                 if d in regions[j].edge_list:
-                                    # 将需求加到对应时间段的Q中
                                     regions[i].demands[interval_index][j] += 1
                                     break
         return regions
@@ -202,7 +182,6 @@ class control(network):
         self.N_data = []
         self.network_data = []
 
-        # 根据不同运行模式初始化
         if joint_control:
             self.b_data = []
             self.c_data = []
@@ -273,13 +252,11 @@ class control(network):
                     next_region = 0
                     for k in range(len(route) - 1):
                         if route[k] in self.regions[i].internal_edge_entry:
-                            # route[k]为边界edge
                             for m in self.regions[i].neighbor:
                                 if route[k + 1] in self.regions[m].edge_list:
                                     next_region = m
                                     break
                     if next_region == 0:
-                        # 一些特殊的路线（比如回头路）
                         for k in route:
                             if k not in self.regions[i].edge_list:
                                 for m in self.regions[i].neighbor:
@@ -368,8 +345,6 @@ class control(network):
         for i in self.regions:
             for j in self.regions[i].vehicles:
                 d_edge = traci.vehicle.getRoute(j)[-1]
-                # d = self.edges[d_edge].eto
-                # 车辆终点
                 for k in self.regions:
                     if d_edge in self.regions[k].edge_list:
                         # if d in self.regions[k].node_list:
@@ -380,7 +355,6 @@ class control(network):
         self._get_control_vehicle_data()
 
         # ------------------signal control---------------------
-        # 计算每个connection的throughput
         for i in self.regions:
             for h in self.regions[i].neighbor:
                 connection_set = self.regions[i].toregion_connection[h]
@@ -393,15 +367,11 @@ class control(network):
                         if dis < self.mic_length * traci.vehicle.getSpeed(v) or (
                                 traci.vehicle.getSpeed(v) < 0.1 and dis < self.mic_length * traci.lane.getMaxSpeed(
                                 fromlane)):
-                            # 按原速行驶mic_length内可以离开该路段，或者停止的车辆
                             num += 1
                     fromlane_queue = num * self.connections[cid].lanenum
-                    # 偏高
-                    # tolane = self.connections[cid].cto+'_'+self.connections[cid].tolane
                     toedge = self.connections[cid].cto
                     tolane_length = self.edges[toedge].length
 
-                    # 按照排队长度最长的lane为准看capacity
                     max_queue_downstream = 0
                     for lid in range(self.edges[toedge].numlane):
                         lane = toedge + '_' + str(lid)
@@ -416,14 +386,12 @@ class control(network):
         # for capacity constraints
         tl_M_max = {}
         tl_M_min = {}
-        # superphase集合及throughput
         region_temp = []
         for i in self.regions:
             region_temp.append(i)
             for h in self.regions[i].neighbor:
                 if h in region_temp:
                     continue
-                # 计算每个tl每个phase的throughput
                 throughput = {}
                 reversed_throughput = {}
                 for tl in self.regions[i].toregion_trafficlight[h]:
@@ -445,14 +413,13 @@ class control(network):
                             if phase[linkindex] == 'g' or phase[linkindex] == 'G':
                                 reversed_throughput['%s_%s' % (tl, phase)] += self.connections[cid].throughput
 
-                # superphase集合及throughput
                 super_phase_set = []
                 super_phase_dic = {}
                 temp = {}
                 phase_num = {}
                 for tl in self.regions[i].toregion_trafficlight[h]:
                     temp[tl] = 0
-                    phase_num[tl] = len(self.trafficlights[tl].phase) - 1  # 从0算起
+                    phase_num[tl] = len(self.trafficlights[tl].phase) - 1  
                 id = 0
 
                 tl_M_max['%s_%s' % (i, h)] = 0
@@ -506,10 +473,8 @@ class control(network):
                     tl_M_max['%s_%s' % (h, i)] = 0.15
                     tl_M_min['%s_%s' % (h, i)] = 0
 
-        # 单位时间内的Mmax和Mmin
         self.M_second_max = {}
         self.M_second_min = {}
-        # mic时间内的M
         if temp_M == 0:
             self.previous_M = {}
             for i in self.regions:
@@ -572,11 +537,9 @@ class control(network):
 
         output_suffix = f'_RG{num}' if random_generator else ''
 
-        # 保存主要数据
         pd.DataFrame(self.N_data).to_csv(f'{self.save_path}\\{prefix}_N{output_suffix}.csv')
         pd.DataFrame(self.network_data).to_csv(f'{self.save_path}\\{prefix}_network{output_suffix}.csv')
 
-        # 特定模式保存额外数据
         if prefix.startswith('joint_control'):
             pd.DataFrame(self.b_data).to_csv(f'{self.save_path}\\{prefix}_M{output_suffix}.csv')
             pd.DataFrame(self.c_data).to_csv(f'{self.save_path}\\{prefix}_c{output_suffix}.csv')
@@ -608,20 +571,16 @@ class control(network):
                         travel_times.append(travel_time)
                     utilities=[-self.beta*t for t in travel_times]
 
-                    # 使用数值稳定化来避免 np.exp() 溢出
-                    max_utility = np.max(utilities)  # 找到 utilities 中的最大值
-                    utilities_stable = utilities - max_utility  # 每个效用减去最大值
+                    max_utility = np.max(utilities)  
+                    utilities_stable = utilities - max_utility 
 
-                    # 使用 logit 模型计算选择概率
-                    exp_utilities = np.exp(utilities_stable)  # 现在效用值稳定
+                    exp_utilities = np.exp(utilities_stable) 
                     total_exp_utilities = np.sum(exp_utilities)
-                    probabilities = exp_utilities / total_exp_utilities  # 归一化为概率
+                    probabilities = exp_utilities / total_exp_utilities 
 
-                    # 随机抽样选择路径（根据 logit 模型的概率选择）
                     chosen_route_idx = np.random.choice(len(routes), p=probabilities)
                     chosen_route = routes[chosen_route_idx]
 
-                    # 更新车辆的选择路径
                     traci.vehicle.setRoute(v.id, chosen_route)
 
     def has_loop(self,route):
@@ -631,7 +590,6 @@ class control(network):
         seen_edges = {}
         for i, edge in enumerate(route):
             if edge in seen_edges:
-                # 删除重复边从第一次出现到该重复边的部分
                 return route[:seen_edges[edge] + 1] + route[i + 1:]
             seen_edges[edge] = i
         return route
@@ -641,7 +599,6 @@ class control(network):
         present_edge = traci.vehicle.getRoadID(v)
 
         if present_edge == present_route[-1] or present_edge == present_route[-2] or present_edge==present_route[-3]:
-            #present next desitination固定
             for k in range(len(present_route)):
                 if present_route[k]==present_edge:
                     present_route=present_route[k:]
@@ -668,7 +625,7 @@ class control(network):
                 print('optimal_route',traci.simulation.findRoute(present_next_edge, present_route[-1]).edges)
 
 
-            max_route_length = 80  # 假设设置一个合理的最大路径长度
+            max_route_length = 80 
             if len(optimal_route) > max_route_length:
                 print(f"Route too long for vehicle {v}: present_route or optimal_route",v,present_route,optimal_route)
 
@@ -679,7 +636,6 @@ class control(network):
         return routes
 
     def _calculate_weight(self, node, phase):
-        # self.saturated_flow=1 #饱和流率，由于所有相位设置同一流率，取1
         controlledlinks = traci.trafficlight.getControlledLinks(node)
 
         weight = {}
@@ -695,7 +651,6 @@ class control(network):
             outputedge = traci.lane.getEdgeID(outputlane)
             downstream_queue = int(
                 traci.edge.getLastStepHaltingNumber(outputedge) / traci.edge.getLaneNumber(outputedge))
-            # 进口车道的排队数-平均出口车道的排队数
             if inputlane not in weight:
                 weight[inputlane] = []
             weight[inputlane].append((upstream_queue - downstream_queue) * self.saturated_flow)
@@ -710,12 +665,10 @@ class control(network):
 
 class joint_control(control):
     def __init__(self):
-        # 调用父类 control 的构造函数
         super().__init__()
 
     def run(self):
         self._init()
-        # 获取分区的inputlane,outputlane,bound等
         self.static_regions = self._region_nodelist(label=False, regions=self.dynamic_regions[0])
         self.static_regions = self._region_demands(regions=self.dynamic_regions[0],
                                                    begin=self.warm_time, end=100000)
@@ -742,24 +695,20 @@ class joint_control(control):
             traci.simulation.step(time=float(time))
 
             if time==self.test_begin or time==self.test_end:
-                #画network流量热力图
                 self._draw_density(time)
 
             self._reset_data()
             self._update_network_data()
 
             if time <= self.time_length:
-                # 时间未超出限制，继续进行联合控制
                 self._joint_control(time)
             elif not self.reach_termination:
                 self.reach_termination = self.check_terminate_condition()
                 if self.reach_termination:
-                    # 如果决定终止控制，恢复固定信号并继续仿真
                     self._save_output('joint_control(under_control_period)', random_generator, num)
                     print('terminate at time %s'%time)
                     self.restore_to_fixed_signal()
                 else:
-                    # 未终止，继续进行联合控制
                     self._joint_control(time)
 
             self._save_data(time, termination=self.reach_termination)
@@ -887,7 +836,6 @@ class joint_control(control):
                         if h in v.next_regions:
                             max+=1
                             if len(v.next_regions)==1 or (v.next_regions[0]==h and v.next_regions[1]==h):
-                                #只有一条路线 或者 两天路线的next_region 都是h
                                 min+=1
                     cmax['%d_%d_%d' % (i, h, j)]=float(max/total)
                     cmin['%d_%d_%d' % (i, h, j)]=float(min/total)
@@ -899,7 +847,6 @@ class joint_control(control):
 
         self._save_network_data(time)
         for i in self.regions:
-            # 当前的n
             data = {}
             data['region'] = i
             data['time'] = time
@@ -912,9 +859,7 @@ class joint_control(control):
             data['completionflow'] = self.regions[i].completion_flow
             data['critical_n'] = self.regions[i].critical
             if time % self.mac_length == 0:
-                # p带入后的 期望的n
                 data['expected_n(p)_t+1'] = self.regions[i].n_p
-                # b,c带入后的 期望的n
                 data['expected_n(b,c)_t+1'] = self.regions[i].n_bc
             else:
                 data['expected_n(p)_t+1'] = -1
@@ -966,7 +911,6 @@ class joint_control(control):
             for h in self.regions[i].neighbor:
                 for j in self.regions[i].nd:
                     if i==j:
-                        #ihi不存在
                         continue
                     index['p_%d_%d_%d' % (i, h, j)] = temp
                     temp += 1
@@ -998,13 +942,13 @@ class joint_control(control):
             constant += -self.regions[i].critical
 
             N = np.mat(N)
-            p0 = 2 * N * constant  # 平方的一次
+            p0 = 2 * N * constant 
             p0 = p0.tolist()[0]
             num=len(p0)
             for k in range(num):
                 p[index[index_i[k]]] += p0[k]
 
-            Q0 = 2 * N.T * N  # 平方的二次
+            Q0 = 2 * N.T * N  
             Q0 = Q0.tolist()
             for k in range(num):
                 for m in range(num):
@@ -1053,7 +997,6 @@ class joint_control(control):
                 temp+=1
                 for j in self.regions[i].nd:
                     if i == j:
-                        # ihi不存在
                         continue
                     #c_ihj
                     index['%d_%d_%d' % (i, h, j)] = temp
@@ -1146,11 +1089,9 @@ class joint_control(control):
 
 
     def save_matrices(self,Q, p, G, H, A, b):
-        # 创建一个目录存储矩阵
         if not os.path.exists('qp_matrices'):
             os.makedirs('qp_matrices')
 
-        # 将矩阵保存为文本文件，便于后续分析
         np.savetxt(f'qp_matrices/Q.txt', Q, delimiter=',')
         np.savetxt(f'qp_matrices/p.txt', p, delimiter=',')
         np.savetxt(f'qp_matrices/G.txt', G, delimiter=',')
@@ -1162,7 +1103,6 @@ class joint_control(control):
 
     def _signal_control(self):
         self.tl_M = {}
-        # mic_length时段内的tl_M
         for i in self.regions:
             for h in self.regions[i].neighbor:
                 n = len(self.previous_M['%d_%d' % (i, h)])
@@ -1170,7 +1110,6 @@ class joint_control(control):
                     self.previous_M['%d_%d' % (i, h)] * self.mic_length)) / (self.mac_length - self.mic_length * n)
                 self.tl_M['%d_%d' % (i, h)] = M - self.previous_notl_M['%d_%d' % (i, h)]
 
-        # 确定符合signal_g的superphase集合
         region_temp = []
         phaseset = {}
         for i in self.regions:
@@ -1179,11 +1118,9 @@ class joint_control(control):
                 if h in region_temp:
                     continue
                 if len(self.regions[i].toregion_superphaseset[h]) == 0:
-                    # ih边界没有tl的交叉口
                     phaseset['%d_%d' % (i, h)] = -1
                     continue
 
-                # phaseset应该是双向的 i,h边界的交叉口
                 phaseset['%d_%d' % (i, h)] = []
                 sumgapset = []
                 temp = 0
@@ -1202,19 +1139,15 @@ class joint_control(control):
                     sumgapset.append(gap + reversed_gap)
 
                 if temp == 0:
-                    # 没有满足约束的phaseset
                     temp1 = sorted(sumgapset)
-                    # 取gap最小的10个
                     value = temp1[:10]
                     for v in value:
                         id = sumgapset.index(v)
                         phaseset['%d_%d' % (i, h)].append(self.regions[i].toregion_superphaseset[h][id])
 
                 if temp > 100:
-                    # 存在超过一百个multi-phase
                     phaseset['%d_%d' % (i, h)] = []
                     temp1 = sorted(sumgapset)
-                    # 取gap最小的100个
                     value = temp1[:100]
                     for v in value:
                         id = sumgapset.index(v)
@@ -1235,7 +1168,6 @@ class joint_control(control):
                         weight_set[tl][phase] = self._calculate_weight(tl, phase)
 
         optimized_superphase = {}
-        # 在phaseset中选择最大压的
         region_temp = []
         for i in self.regions:
             region_temp.append(i)
@@ -1311,20 +1243,19 @@ class joint_control(control):
                         for r in range(len(v.routes)):
                             route=v.routes[r]
                             if len(route)>=3 and route[2]==edge:
-                                #下一个link为edge
                                 N.append(float(1/(edge.length*edge.numlane)))
                                 index2[temp]='%s_%s_%s' % (j,v.id,r)
                                 temp+=1
 
                 N = np.mat(N)
-                p0 = 2 * N * constant  # 平方的一次
+                p0 = 2 * N * constant 
                 p0 = p0.tolist()[0]
                 num = len(p0)
 
                 for k in range(num):
                     p[index[index2[k]]] += p0[k]
 
-                Q0 = 2 * N.T * N  # 平方的二次
+                Q0 = 2 * N.T * N 
                 Q0 = Q0.tolist()
                 for k in range(num):
                     for m in range(num):
@@ -1342,9 +1273,6 @@ class joint_control(control):
                     temp = 0
                     constant = -c['%d_%d_%d' % (i, h, j)]
                     for v in self.regions[i].control_vehicles[j]:
-                        #if v.boundary != 1:
-                        #    # 不是边界车辆
-                        #    continue
                         total=len(self.regions[i].control_vehicles[j])
                         for r in range(len(v.routes)):
                             next_region = v.next_regions[r]
@@ -1354,14 +1282,14 @@ class joint_control(control):
                                 index3[temp] = '%s_%s_%s' % (j, v.id, r)
                                 temp += 1
                     N = np.mat(N)
-                    p0 = 2 * N * constant  # 平方的一次
+                    p0 = 2 * N * constant 
                     p0 = p0.tolist()[0]
                     num = len(p0)
 
                     for k in range(num):
                         p[index[index3[k]]] += self.big_num*p0[k]
 
-                    Q0 = 2 * N.T * N  # 平方的二次
+                    Q0 = 2 * N.T * N 
                     Q0 = Q0.tolist()
                     for k in range(num):
                         for m in range(num):
@@ -1421,93 +1349,8 @@ class joint_control(control):
                         #print(traci.vehicle.getRoute(v.id))
                         #print(v.route_choice)
                         traci.vehicle.setRoute(v.id,v.route_choice)
-'''
-class only_perimeter_control1(joint_control):
-    def __init__(self, navigation=False):
-        # 调用父类 control 的构造函数
-        super().__init__()
-        self.navigation = navigation
-
-    def run(self):
-        self._init()
-        # 获取分区的inputlane,outputlane,bound等
-        self.static_regions = self._region_nodelist(label=False, regions=self.dynamic_regions[0])
-        self.static_regions = self._region_demands(regions=self.dynamic_regions[0],
-                                                   begin=self.warm_time, end=100000)
-        self._sim_onlyperimeter_control()
-        self._terminate()
-
-    def _sim_onlyperimeter_control(self):
-
-        time = self.warm_time
-        self._initialize_vars(only_perimeter_control=True)
-
-        print('start')
-        while traci.simulation.getMinExpectedNumber() > 0:
-            traci.simulation.step(time=float(time))
-            self._reset_data()
-            self._update_network_data()
-
-            if time <= self.time_length:
-                # 时间未超出限制，继续进行联合控制
-                self._only_perimeter_control(time)
-                if self.navigation:
-                    self._action_randomroute()
-
-            elif not self.reach_termination:
-                # 时间超过限制，检查是否需要终止仿真
-                self.reach_termination = self.check_terminate_condition()
-                if self.reach_termination:
-                    # 如果决定终止控制，恢复固定信号并继续仿真
-                    self._save_output('only_perimeter_control(under_control_period)')
-                    print('terminate at time %s' % time)
-                    self.restore_to_fixed_signal()
-                else:
-                    # 未终止，继续进行联合控制
-                    self._only_perimeter_control(time)
-                    if self.navigation:
-                        self._action_randomroute()
-
-            self._save_data(time)
-            if self.reach_termination:
-                if len(self.total_vehicles) < self.threshold_veh_num:
-                    break
-            time += self.mic_length
-
-        self._save_output('only_perimeter_control')
-
-    def _only_perimeter_control(self, time):
-        self._get_data(time)
-        self._get_completion_flow()
-
-        if time % self.mac_length == 0:
-            # model
-            self.cmax, self.cmin = self._get_c_range()
-            print('model1')
-            solution_p = self._perimeter_model1()
-            self._get_expected_m(solution_p, type='perimeter control')  # def in joint control
-            self.step += 1
-        # signal control
-        print('signal')
-        optimized_superphase = self._signal_control()
-        self._action_signal(optimized_superphase)
-
-    def _save_data(self, time):
-        for i in self.regions:
-            # 当前的n
-            data = {}
-            data['region'] = i
-            data['time'] = time
-            data['real_n_t'] = self.regions[i].n
-            data['output_t-1'] = self.regions[i].output
-            self.N_data.append(data)
-        self._save_network_data(time)
-'''
-
-
 class only_perimeter_control(joint_control):
     def __init__(self,_with_logit_route_choice=False):
-        # 调用父类 control 的构造函数
         super().__init__()
         self._with_logit_route_choice=_with_logit_route_choice
         self.M_last_mac_step={}
@@ -1515,7 +1358,6 @@ class only_perimeter_control(joint_control):
         self.K_I=0.005
     def run(self):
         self._init()
-        # 获取分区的inputlane,outputlane,bound等
         self.static_regions = self._region_nodelist(label=False, regions=self.dynamic_regions[0])
         self.static_regions = self._region_demands(regions=self.dynamic_regions[0],
                                                    begin=self.warm_time, end=100000)
@@ -1533,16 +1375,13 @@ class only_perimeter_control(joint_control):
             self._update_network_data()
 
             if time <= self.time_length:
-                # 时间未超出限制，继续进行联合控制
                 self._only_perimeter_control(time)
                 if self._with_logit_route_choice:
                     self._action_logit_based_route()
 
             elif not self.reach_termination:
-                # 时间超过限制，检查是否需要终止仿真
                 self.reach_termination = self.check_terminate_condition()
                 if self.reach_termination:
-                    # 如果决定终止控制，恢复固定信号并继续仿真
                     if self._with_logit_route_choice:
                         self._save_output('only_perimeter_control_with_logit_route_choice(under_control_period)')
                     else:
@@ -1551,7 +1390,6 @@ class only_perimeter_control(joint_control):
                     print('terminate at time %s'%time)
                     self.restore_to_fixed_signal()
                 else:
-                    # 未终止，继续进行联合控制
                     self._only_perimeter_control(time)
                     if self._with_logit_route_choice:
                         self._action_logit_based_route()
@@ -1569,7 +1407,6 @@ class only_perimeter_control(joint_control):
 
     def _get_expected_m(self):
         self.M = {}
-        # mac_length时段内的M
         for i in self.regions:
             for h in self.regions[i].neighbor:
                 self.M['%d_%d' % (i, h)] = self.M_last_mac_step['%d_%d' % (i, h)]-self.K_P*(self.regions[i].n-self.regions[i].n_last_mac_step)-self.K_I*(self.regions[i].n-self.regions[i].critical)
@@ -1587,7 +1424,6 @@ class only_perimeter_control(joint_control):
 
     def _save_data(self,time):
         for i in self.regions:
-            #当前的n
             data = {}
             data['region'] = i
             data['time']=time
@@ -1598,13 +1434,11 @@ class only_perimeter_control(joint_control):
 
 class backpressure_control(only_perimeter_control):
     def __init__(self,_with_logit_route_choice=False):
-        # 调用父类 control 的构造函数
         super().__init__()
         self._with_logit_route_choice=_with_logit_route_choice
 
     def run(self):
         self._init()
-        # 获取分区的inputlane,outputlane,bound等
         self.static_regions = self._region_nodelist(label=False, regions=self.dynamic_regions[0])
         self.static_regions = self._region_demands(regions=self.dynamic_regions[0],
                                                    begin=self.warm_time,end=100000)
@@ -1621,15 +1455,12 @@ class backpressure_control(only_perimeter_control):
             self._update_network_data()
 
             if time <= self.time_length:
-                # 时间未超出限制，继续进行联合控制
                 self._backpressure_signal_control(time)
                 if self._with_logit_route_choice:
                     self._action_logit_based_route()
             elif not self.reach_termination:
-                # 时间超过限制，检查是否需要终止仿真
                 self.reach_termination = self.check_terminate_condition()
                 if self.reach_termination:
-                    # 如果决定终止控制，恢复固定信号并继续仿真
                     if self._with_logit_route_choice:
                         self._save_output('backpressure_control_with_logit_route_choice(under_control_period)')
                     else:
@@ -1639,7 +1470,6 @@ class backpressure_control(only_perimeter_control):
                     print('terminate at time %s'%time)
                     self.restore_to_fixed_signal()
                 else:
-                    # 未终止，继续进行联合控制
                     self._backpressure_signal_control(time)
                     if self._with_logit_route_choice:
                         self._action_logit_based_route()
@@ -1689,27 +1519,8 @@ class backpressure_control(only_perimeter_control):
                 self.regions[i].nd[j]=0
 
         for i in self.regions:
-            '''
-            vehicle_number = 0
-            vehicles = set()
-            for j in self.regions[i].edge_list_IIE:
-                vehicle_number += traci.edge.getLastStepVehicleNumber(j)
-                vehicles.update(traci.edge.getLastStepVehicleIDs(j))
-            self.regions[i].n=vehicle_number
-            
-            if time != self.warm_time:
-                output = 0
-                for j in self.regions[i].vehicles:
-                    if j not in vehicles:
-                        output += 1
-                self.regions[i].output = output
-            else:
-                self.regions[i].output=-1
-            self.regions[i].vehicles = vehicles
-            '''
             for j in self.regions[i].vehicles:
                 d_edge = traci.vehicle.getRoute(j)[-1]
-                #车辆终点
                 for k in self.regions:
                     if d_edge in self.regions[k].edge_list:
                         self.regions[i].nd[k] += 1
