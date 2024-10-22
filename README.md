@@ -9,6 +9,7 @@ Control Strategies:
 5. MP-LR: backpressure control for boundary intersection with logit-based route guidance strategy
 
 The SUMO simulation files are located in the data directory.
+The network partitioning scheme and MFD functions are located in the partition directory.
 
 Related Paper: 
 
