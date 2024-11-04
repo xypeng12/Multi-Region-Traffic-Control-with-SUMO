@@ -1468,6 +1468,7 @@ class backpressure_control(only_perimeter_control):
                         weight = self._calculate_weight(tl, phase)
                         if weight>=max_weight:
                             max_weight_phase=phase
+                            max_weight=weight
                     traci.trafficlight.setRedYellowGreenState(tl, max_weight_phase)
                     traci.trafficlight.setPhaseDuration(tl, self.mic_length)
 
