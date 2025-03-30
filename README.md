@@ -1,4 +1,4 @@
-# SUMO-Integrated-Perimeter-Control-and-Route-Guidance
+# Multi-Region Traffic Control with SUMO
 This repository implements a multi-scale joint control (MSJC) framework for perimeter control and route guidance in a multi-region network, integrated with SUMO (Simulation of Urban MObility).
 
 Control Strategies:
