@@ -9,6 +9,16 @@ from opponent import *
 plt.rcParams["font.sans-serif"]=["SimHei"]
 plt.rcParams["axes.unicode_minus"]=False
 class network:
+    def __init__(self):
+        '''
+        self.sumocfg_file = 'data/yangzhou.sumocfg'
+        self.save_path='region'
+        self._init()
+        #随机分区：给出每子区的edge集合
+        self._random_region()
+        # 获取分区的inputlane,outputlane,bound等
+        self._region_nodelist()
+        '''
     def _init(self,seed=None):
         self._init_sim(seed)
         self._init_nodes()
@@ -16,9 +26,10 @@ class network:
         self._init_connections()
         self._init_trafficlight()
     def _MFD_function(self, x, a):
+        # x为子区车辆数 a为参数
         #revise2
         G = a[0]* (x ** 3)+a[1] * (x ** 2)+a[2] *x
-        return G
+        return max(G,0.1)
 
     def _get_critical(self, x, mfd_param):
         x2 = range(int(min(x)), int(max(x)), 2)
@@ -28,10 +39,12 @@ class network:
         index = sg.argrelmax(np.array(y2))[0]
         top=0
         if len(index) == 0:
+            # 没到极值，取最大的x
             print('没到极值')
             top=-1
             critical = x2[len(x2) - 1]
         else:
+            # index可能是多个值 取第一个
             critical = x2[int(index[0])]
 
         return critical,top
@@ -50,6 +63,7 @@ class network:
             critical,top=self._get_critical(x,mfd_param)
 
             if time>=2:
+                #删两次
                 break
             x_update = []
             y_update = []
@@ -58,6 +72,7 @@ class network:
                 if y_temp > y[j] and x[j]>critical:
                     continue
                 if top==-1 and y_temp > y[j] and x[j]>critical*0.3:
+                    #如果没到极值，删掉曲线下方的点（除曲线开始的点）
                     continue
                 x_update.append(x[j])
                 y_update.append(y[j])
@@ -100,6 +115,7 @@ class network:
                 temp=0
                 for nnode in self.nodes[node].neighbor:
                     if nnode not in regions[i].node_list:
+                        #nnode在子区外
                         temp=1
                         for j in self.edges:
                             edge=self.edges[j]
@@ -117,6 +133,7 @@ class network:
             for node in regions[i].bound_node:
                 for nnode in self.nodes[node].neighbor:
                     if nnode in regions[i].node_list:
+                        #nnode在子区内
                         for j in self.edges:
                             edge=self.edges[j]
                             if node==edge.eto and nnode==edge.efrom:
@@ -156,6 +173,7 @@ class network:
                     if outputlane not in outputlaneset_bound:
                         outputlaneset_bound.add(outputlane)
             regions[i].outputlaneset_bound = outputlaneset_bound
+            #边界&endnode处
             outputlaneset=outputlaneset_bound
             for edge_id in regions[i].output_edge_list:
                 for lid in range(self.edges[edge_id].numlane):
@@ -176,6 +194,7 @@ class network:
                         regions[i].toregion_trafficlight[k][tl]=[]
                     regions[i].toregion_trafficlight[k][tl].append(cid)
 
+        #补充self.trafficlight phase
         for i in regions:
             for h in regions[i].neighbor:
                 for tl in regions[i].toregion_trafficlight[h]:
@@ -184,6 +203,7 @@ class network:
                         reversed_connection_set = []
                     else:
                         reversed_connection_set =regions[h].toregion_trafficlight[i][tl]
+                    #正向绿的相位
                     green_phase=[]
                     for p in range(len(self.trafficlights[tl].phase)):
                         phase = self.trafficlights[tl].phase[p]
@@ -192,6 +212,7 @@ class network:
                             if phase[linkindex] == 'g' or phase[linkindex] == 'G':
                                 green_phase.append(phase)
                                 break
+                    #正向绿反向红的相位
                     new_phase=[]
                     for phase in green_phase:
                         for cid in reversed_connection_set:
@@ -207,11 +228,39 @@ class network:
             self.regions=regions
         else:
             return regions
+
+    '''
+    def _random_region(self):
+        self.regions= {}
+        self.regions[0]=Region(0)
+        self.regions[1] = Region(1)
+        self.regions[2] = Region(2)
+
+        for id in self.edges:
+            if (id in self.regions[0].edge_list) or (id in self.regions[1].edge_list) or (id in self.regions[2].edge_list):
+                continue
+            edge=self.edges[id]
+            x = [list(edge.frompos)[0], list(edge.topos)[0]]
+            #y = [list(edge.frompos)[1], list(edge.topos)[1]]
+            if x[0]<18000:
+                self.regions[0].edge_list.add(id)
+                if edge.reverse!=0:
+                    self.regions[0].edge_list.add(edge.reverse)
+            elif x[0]>23500:
+                self.regions[1].edge_list.add(id)
+                if edge.reverse != 0:
+                    self.regions[1].edge_list.add(edge.reverse)
+            else:
+                self.regions[2].edge_list.add(id)
+                if edge.reverse != 0:
+                    self.regions[2].edge_list.add(edge.reverse)
+    '''
     def _init_sim(self,seed=None):
         # 访问sumo
         #sumoBinary = 'sumo-gui'
         sumoBinary='sumo'
         sumoCmd = [sumoBinary, "-c",self.sumocfg_file]
+        # 如果有种子，则传递种子到 SUMO，否则使用默认的随机性
         if seed is not None:
             sumoCmd += ["--seed", str(seed)]
             print(f"SUMO started with seed: {seed}")
@@ -227,7 +276,7 @@ class network:
             position=traci.junction.getPosition(id)
             self.nodes[id] = Node(id,position=position)
 
-        tree = ET.parse("data\\yangzhou.net.xml")
+        tree = ET.parse("data/yangzhou.net.xml")
         root = tree.getroot()
         self.endnodes = set()
         for child in root:
@@ -238,7 +287,7 @@ class network:
                 self.endnodes.add(data['id'])
 
     def _init_trafficlight(self):
-        tree = ET.parse("data\\yangzhou.net.xml")
+        tree = ET.parse("data/yangzhou.net.xml")
         root = tree.getroot()
         self.trafficlights = {}
         for child in root:
@@ -252,6 +301,7 @@ class network:
             for i in child:
                 if i.tag != 'phase':
                     continue
+                #筛选
                 state=i.attrib['state']
                 temp=0
                 for p in state:
@@ -264,7 +314,7 @@ class network:
 
 
     def _init_connections(self):
-        tree = ET.parse("data\\yangzhou.net.xml")
+        tree = ET.parse("data/yangzhou.net.xml")
         root = tree.getroot()
         self.connections={}
         index=0
@@ -300,7 +350,7 @@ class network:
 
 
     def _init_edges(self):
-        tree=ET.parse("data\\yangzhou.net.xml")
+        tree=ET.parse("data/yangzhou.net.xml")
         root=tree.getroot()
         self.edges = {}
         self.edges_id=[]

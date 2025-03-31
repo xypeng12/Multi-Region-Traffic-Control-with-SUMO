@@ -25,6 +25,24 @@ class trafficlight:
         self.program=program
         self.phase=phase
         self.duration=duration
+    def _filter_phases(self):
+        n = len(self.phase)
+        remove = [False] * n
+        for i in range(n):
+            for j in range(n):
+                if i == j:
+                    continue
+                # 判断 phases[j] 是否“覆盖” phases[i]
+                # 条件：对于 phases[i] 中每个位置，如果它是 'G'，那么 phases[j] 在该位置也必须是 'G'
+                covers = True
+                for pos in range(len(self.phase[i])):
+                    if self.phase[i][pos] == 'G' and self.phase[j][pos] != 'G':
+                        covers = False
+                        break
+                if covers:
+                    remove[i] = True
+                    break
+        self.phase=[phase for i, phase in enumerate(self.phase) if not remove[i]]
 
 class Connection:
     def __init__(self,id,name=None,cfrom=None, cto = None, fromlane = None, tolane = None, dir = None, type = None, tl = None, linkindex =0):
@@ -38,7 +56,7 @@ class Connection:
         self.type=type
         self.tl=tl
         self.linkindex=linkindex
-        self.lanenum=1 #1 1/2 1/3
+        self.lanenum=1 #1 1/2 1/3...取决于有几个connection共用该lane
         self.throughput=0
 
 class Edge:
@@ -62,6 +80,8 @@ class Edge:
         self.travel_time=0
         self.num_speed=5 #5 to get the mean speed
 
+        self.speed = []
+
     def update_speed(self,speed):
         if len(self.speed_list)<self.num_speed:
             self.speed_list.append(speed)
@@ -83,15 +103,15 @@ class Vehicle:
         self.id=id
         self.destination =destination
         self.routes=routes
-        self.next_regions=next_regions 
-        self.route_choice=[] 
+        self.next_regions=next_regions #next_region和route对应
+        self.route_choice=[] #route_choice=选择的next_region
 
 class Region:
     def __init__(self, id):
         self.id=id
         self.node_list=[]
         self.edge_list=set()
-        self.edge_list_IIE=set()
+        self.edge_list_IIE=set() #edge_list_including_internal_edge
 
         self.bound_node=[]
         self.external_edge_entry=[]
@@ -106,9 +126,10 @@ class Region:
         self.toregion_superphaseset={}
         self.toregion_superphasedic={}
 
-        self.neighbor=[]
+        self.neighbor=[]#相邻子区
         self.ave_density=0
-        self.twodir_edge_num=0
+        self.twodir_edge_num=0#双向单向edge都算一个 edge总数
+        self.cv=[]
 
         #perimeter control
         # a control step k
@@ -119,12 +140,13 @@ class Region:
         self.n_p=0
         self.n_bc=0
         self.output=0
-        self.n_last_mac_step=0 
+        self.n_last_mac_step=0 #for PI-based PC
 
 
         self.nd={}
         #Qii(k) Qij(k)
         self.q={}
+        #列表 存所有步长的q{}
         self.demands=[]
 
         self.mfd_param=[]
@@ -137,6 +159,7 @@ class Region:
 
         self.input_lane=[]
         self.output_lane=[]
+        #0-1200step的累计车辆数，输入车辆数，输出车辆数
         self.accumulation=[]
 
         self.G=[]
@@ -147,4 +170,5 @@ class Region:
 
         self.travel_time=[]
         self.delay=[]
+        #本step的 vehicle set
         self.vehicles=[]
