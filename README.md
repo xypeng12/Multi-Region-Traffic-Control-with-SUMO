@@ -14,12 +14,6 @@ We provide five control strategies for comparison:
 | **MP**     | Backpressure control for boundary intersections without route guidance |
 | **MP-LR**  | Backpressure control for boundary intersections with **logit-based** route guidance |
 
-## 📂 Repository Structure
-data/         # SUMO simulation networks, demand, and configuration files
-partition/    # Network partitioning schemes and MFD functions
-controllers/  # Upper- and lower-level control algorithm implementations
-utils/        # Helper functions for simulation, logging, and result processing
-
 ## 📜 Related Paper
 
 > **Peng, Xianyue**, Wang, Hao, & Zhang, Michael.  
