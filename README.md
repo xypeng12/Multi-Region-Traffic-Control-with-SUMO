@@ -21,7 +21,7 @@ We provide five control strategies for comparison:
 > SSRN, 2023. [https://ssrn.com/abstract=4502092](https://ssrn.com/abstract=4502092)  
 
 **BibTeX:**
-bibtex
+```bibtex
 @article{peng2023multiscale,
   title={A Multi-Scale Perimeter Control and Route Guidance System for Large-Scale Road Networks},
   author={Peng, Xianyue and Wang, Hao and Zhang, Michael},
@@ -29,5 +29,5 @@ bibtex
   year={2023},
   doi={10.2139/ssrn.4502092}
 }
-
+```
 More works by the author can be found on Google Scholar: https://scholar.google.com/citations?user=o8ghKIgAAAAJ&hl=en&oi=ao
