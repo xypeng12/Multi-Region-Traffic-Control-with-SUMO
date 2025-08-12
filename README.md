@@ -20,7 +20,8 @@ We provide five control strategies for comparison:
 > *A Multi-Scale Perimeter Control and Route Guidance System for Large-Scale Road Networks.*  
 > SSRN, 2023. [https://ssrn.com/abstract=4502092](https://ssrn.com/abstract=4502092)  
 
-**BibTeX:**
+**Citation:**
+If you use this code in your research, please cite:
 ```bibtex
 @article{peng2023multiscale,
   title={A Multi-Scale Perimeter Control and Route Guidance System for Large-Scale Road Networks},
