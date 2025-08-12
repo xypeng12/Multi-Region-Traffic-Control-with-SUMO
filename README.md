@@ -2,7 +2,7 @@
 
 This repository implements a **Multi-Scale Joint Control (MSJC)** framework for **perimeter control** and **route guidance** in a multi-region traffic network, integrated with [**SUMO**](https://www.eclipse.org/sumo/) (Simulation of Urban MObility).
 
-## 🚦 Control Strategies
+## Control Strategies
 
 We provide five control strategies for comparison:
 
@@ -14,7 +14,7 @@ We provide five control strategies for comparison:
 | **MP**     | Backpressure control for boundary intersections without route guidance |
 | **MP-LR**  | Backpressure control for boundary intersections with **logit-based** route guidance |
 
-## 📜 Related Paper
+## Citation
 
 > **Peng, Xianyue**, Wang, Hao, & Zhang, Michael.  
 > *A Multi-Scale Perimeter Control and Route Guidance System for Large-Scale Road Networks.*  
